@@ -15,6 +15,7 @@ IMAGE_NAME: fastapi-app
 jobs:
 build-and-push:
 runs-on: ubuntu-latest
+
 steps:
   - name: Checkout Repository
     uses: actions/checkout@v4
