@@ -16,6 +16,7 @@ jobs:
 build-and-push:
 runs-on: ubuntu-latest
 
+```
 steps:
   - name: Checkout Repository
     uses: actions/checkout@v4
@@ -64,3 +65,4 @@ steps:
             "image_name": "'"$ACR_NAME.azurecr.io/$IMAGE_NAME"'"
           }
         }'
+```
