@@ -1,66 +1,70 @@
 name: Build and Push FastAPI Image
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+push:
+branches:
+- main
+pull_request:
+branches:
+- main
 
 env:
-  ACR_NAME: apiacrkundan003
-  IMAGE_NAME: fastapi-app
+ACR_NAME: apiacrkundan003
+IMAGE_NAME: fastapi-app
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+build-and-push:
+runs-on: ubuntu-latest
 
-      - name: Create Git Tag
-        if: github.event_name == 'push'
-        run: |
-          TAG="v$(date +'%Y%m%d%H%M%S')"
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag $TAG
-          git push origin $TAG
-          echo "TAG_NAME=$TAG" >> $GITHUB_ENV
+steps:
+  - name: Checkout Repository
+    uses: actions/checkout@v4
 
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  - name: Set Default Image Tag
+    run: echo "TAG_NAME=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - name: Login to Azure Container Registry
-        run: |
-          az acr login --name $ACR_NAME
+  - name: Create Git Tag
+    if: github.event_name == 'push'
+    run: |
+      TAG="v$(date +'%Y%m%d%H%M%S')"
+      git config user.name "github-actions"
+      git config user.email "github-actions@github.com"
+      git tag $TAG
+      git push origin $TAG
+      echo "TAG_NAME=$TAG" >> $GITHUB_ENV
 
-      - name: Build Docker Image
-        run: |
-          docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ env.TAG_NAME }} .
+  - name: Azure Login
+    uses: azure/login@v1
+    with:
+      creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Push Docker Image
-        run: |
-          docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ env.TAG_NAME }}
+  - name: Login to Azure Container Registry
+    run: |
+      az acr login --name $ACR_NAME
 
-      - name: Output Image Tag
-        run: |
-          echo "Image pushed: $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ env.TAG_NAME }}"
+  - name: Build Docker Image
+    run: |
+      docker build -t $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ env.TAG_NAME }} .
 
-      - name: Trigger Terraform Deployment Repo
-        if: github.event_name == 'push'
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.TERRAFORM_REPO_TOKEN }}" \
-            https://api.github.com/repos/<terraform-org>/<deployment-terraform-repo>/dispatches \
-            -d '{
-              "event_type": "deploy-fastapi",
-              "client_payload": {
-                "image_tag": "'"${{ env.TAG_NAME }}"'",
-                "image_name": "'"$ACR_NAME.azurecr.io/$IMAGE_NAME"'"
-              }
-            }'
+  - name: Push Docker Image
+    run: |
+      docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ env.TAG_NAME }}
+
+  - name: Output Image Tag
+    run: |
+      echo "Image pushed: $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ env.TAG_NAME }}"
+
+  - name: Trigger Terraform Deployment Repo
+    if: github.event_name == 'push'
+    run: |
+      curl -X POST \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer ${{ secrets.TERRAFORM_REPO_TOKEN }}" \
+        https://api.github.com/repos/<terraform-org>/<deployment-terraform-repo>/dispatches \
+        -d '{
+          "event_type": "deploy-fastapi",
+          "client_payload": {
+            "image_tag": "'"${{ env.TAG_NAME }}"'",
+            "image_name": "'"$ACR_NAME.azurecr.io/$IMAGE_NAME"'"
+          }
+        }'
