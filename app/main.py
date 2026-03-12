@@ -4,4 +4,4 @@ app = FastAPI(title="My FastAPI Project")
 
 @app.get("/")
 def home():
-    return {"message": "Kundan FastAPI Project Running V3"}
+    return {"message": "Kundan FastAPI Project Running with Docker and Pipelines!"}
